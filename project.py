@@ -135,3 +135,4 @@ hist_fit = dist.pdf(bin_centers)
 error = compute_error(counts, hist_fit)
 
 st.write(f"**Average error:** {error:.5f}")
+
