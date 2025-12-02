@@ -33,7 +33,7 @@ DISTRIBUTIONS = {
 
 # Streamlit UI
 
-st.title("📊 Histogram Fitting Tool (SciPy Stats)")
+st.title("Histogram Fitting Tool")
 
 st.write("""
 This app allows you to upload or enter data, choose a statistical 
@@ -49,7 +49,7 @@ option = st.radio(
     ("Enter manually", "Upload CSV file")
 )
 
-# --- Manual Entry ---
+#Manual Entry
 data = None
 if option == "Enter manually":
     manual = st.text_area("Enter numbers separated by commas:", "1,2,3,4,5,6")
@@ -58,7 +58,7 @@ if option == "Enter manually":
     except:
         st.warning("Please enter valid comma-separated numbers.")
 
-# --- Upload CSV ---
+#Upload CSV 
 else:
     file = st.file_uploader("Upload CSV with a single column of numbers")
     if file:
