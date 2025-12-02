@@ -27,7 +27,7 @@ DISTS = {
     "Pareto": pareto
 }
 
-# ---- Streamlit UI ----
+#Streamlit UI 
 
 st.title("Histogram Fitting Tool")
 
@@ -36,7 +36,7 @@ st.write(
     "and the app will fit the parameters for you."
 )
 
-# ---- Get the data ----
+# Get the data
 st.header("1. Data Input")
 
 choice = st.radio("How do you want to provide data?", ["Manual", "CSV upload"])
@@ -58,7 +58,7 @@ else:
 if data is None:
     st.stop()
 
-# ---- Distribution selection + fitting ----
+#Distribution selection + fitting
 st.header("2. Pick a Distribution")
 
 dist_name = st.selectbox("Distribution:", list(DISTS.keys()))
@@ -69,9 +69,9 @@ params = dist_class.fit(data)
 
 st.write("Fitted parameters:", params)
 
-# ---- Manual tweaking (optional) ----
+# Manual tweaking (optional)
 st.header("3. Manual Adjustment")
-use_manual = st.checkbox("Let me tweak the parameters")
+use_manual = st.checkbox("Manual fitting")
 
 if use_manual:
     new_params = []
@@ -82,7 +82,7 @@ if use_manual:
         new_params.append(val)
     params = new_params  # override
 
-# ---- Plotting ----
+#Plotting 
 st.header("4. Plot")
 
 fig, ax = plt.subplots(figsize=(6, 4))
@@ -102,7 +102,7 @@ ax.set_title(f"{dist_name} Fit")
 
 st.pyplot(fig)
 
-# ---- error calculation ----
+#error calculation
 st.header("5. Fit Error")
 
 bin_centers = (bins[:-1] + bins[1:]) / 2
