@@ -3,21 +3,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from scipy.stats import (
-    norm, gamma, expon, beta, lognorm, weibull_min, 
+    norm, gamma, expon, beta, lognorm, weibull_min,
     chi2, uniform, triang, pareto
 )
 
-
-# Helper function to compute fit error
-
-def compute_error(y_true, y_fit):
-    # Average absolute error between histogram and fitted curve
-    return np.mean(np.abs(y_true - y_fit))
+# quick helper to compare histogram + model curve
+def compute_error(actual, fitted):
+    return np.mean(np.abs(actual - fitted))
 
 
-# Create dictionary of distribution objects
-
-DISTRIBUTIONS = {
+# list of distributions we let the user try out
+# (easier to work with them in a dict)
+DISTS = {
     "Normal": norm,
     "Gamma": gamma,
     "Exponential": expon,
@@ -30,108 +27,86 @@ DISTRIBUTIONS = {
     "Pareto": pareto
 }
 
-
-# Streamlit UI
+# ---- Streamlit UI ----
 
 st.title("Histogram Fitting Tool")
 
-st.write("""
-This app allows you to upload or enter data, choose a statistical 
-distribution, fit parameters using SciPy, and visualize the result.
-""")
-
-# DATA INPUT SECTION
-
-st.header("1. Upload or Enter Data")
-
-option = st.radio(
-    "Choose data input method:",
-    ("Enter manually", "Upload CSV file")
+st.write(
+    "Upload some data or type it in, pick a distribution, "
+    "and the app will fit the parameters for you."
 )
 
-#Manual Entry
-data = None
-if option == "Enter manually":
-    manual = st.text_area("Enter numbers separated by commas:", "1,2,3,4,5,6")
-    try:
-        data = np.array([float(x) for x in manual.split(",")])
-    except:
-        st.warning("Please enter valid comma-separated numbers.")
+# ---- Get the data ----
+st.header("1. Data Input")
 
-#Upload CSV 
+choice = st.radio("How do you want to provide data?", ["Manual", "CSV upload"])
+
+data = None
+
+if choice == "Manual":
+    raw = st.text_area("Numbers (comma-separated):", "1,2,3,4,5")
+    try:
+        data = np.array([float(x.strip()) for x in raw.split(",")])
+    except:
+        st.warning("Something's off. Make sure everything is numbers.")
 else:
-    file = st.file_uploader("Upload CSV with a single column of numbers")
+    file = st.file_uploader("Upload a CSV with one column of numbers")
     if file:
         df = pd.read_csv(file)
-        data = df.iloc[:, 0].values
+        data = df.iloc[:, 0].to_numpy()
 
-# Stop if no data yet
 if data is None:
     st.stop()
 
+# ---- Distribution selection + fitting ----
+st.header("2. Pick a Distribution")
 
-# DISTRIBUTION SELECTION AND FITTING
+dist_name = st.selectbox("Distribution:", list(DISTS.keys()))
+dist_class = DISTS[dist_name]
 
-st.header("2. Choose a Distribution to Fit")
+# SciPy does the parameter fitting here
+params = dist_class.fit(data)
 
-dist_name = st.selectbox("Select distribution:", list(DISTRIBUTIONS.keys()))
-Dist = DISTRIBUTIONS[dist_name]
+st.write("Fitted parameters:", params)
 
-# Fit parameters
-params = Dist.fit(data)
+# ---- Manual tweaking (optional) ----
+st.header("3. Manual Adjustment")
+use_manual = st.checkbox("Let me tweak the parameters")
 
-st.subheader("Fitted Parameters")
-st.write(params)
-
-
-# MANUAL FITTING MODE
-
-st.header("3. Manual Fit (Adjust Parameters)")
-
-manual_fit = st.checkbox("Enable manual fitting")
-
-if manual_fit:
-    sliders = []
-    st.write("Adjust parameters:")
+if use_manual:
+    new_params = []
     for i, p in enumerate(params):
-        sliders.append(
-            st.slider(f"Parameter {i}", p - abs(p)*2 - 1, p + abs(p)*2 + 1, p)
-        )
-    params = sliders
+        # just giving a reasonably wide range around the fitted value
+        rng = abs(p) + 1
+        val = st.slider(f"param {i}", p - rng, p + rng, p)
+        new_params.append(val)
+    params = new_params  # override
 
+# ---- Plotting ----
+st.header("4. Plot")
 
-# VISUALIZATION
+fig, ax = plt.subplots(figsize=(6, 4))
 
-st.header("4. Visualization")
-
-fig, ax = plt.subplots(figsize=[6, 4])
-
-# Histogram
+# histogram
 counts, bins, _ = ax.hist(data, bins=30, density=True, alpha=0.4)
 
-# Fitted curve
-x = np.linspace(min(data), max(data), 300)
-dist = Dist(*params)
-pdf = dist.pdf(x)
+# model curve
+x = np.linspace(data.min(), data.max(), 300)
+dist_obj = dist_class(*params)
+pdf_vals = dist_obj.pdf(x)
 
-ax.plot(x, pdf, linewidth=2)
-
+ax.plot(x, pdf_vals, linewidth=2)
 ax.set_xlabel("Value")
 ax.set_ylabel("Density")
-ax.set_title(f"Data Histogram with Fitted {dist_name} Distribution")
+ax.set_title(f"{dist_name} Fit")
 
 st.pyplot(fig)
 
-
-# FIT ERROR
-
+# ---- error calculation ----
 st.header("5. Fit Error")
 
-# Convert histogram to midpoints
-bin_centers = 0.5 * (bins[1:] + bins[:-1])
+bin_centers = (bins[:-1] + bins[1:]) / 2
+fit_at_bins = dist_obj.pdf(bin_centers)
 
-# Compute fitted curve at each histogram bin
-hist_fit = dist.pdf(bin_centers)
-error = compute_error(counts, hist_fit)
-
-st.write(f"**Average error:** {error:.5f}")
+err = compute_error(counts, fit_at_bins)
+st.write(f"Average Absolute Error: {err:.5f}")
