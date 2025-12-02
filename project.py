@@ -110,3 +110,4 @@ fit_at_bins = dist_obj.pdf(bin_centers)
 
 err = compute_error(counts, fit_at_bins)
 st.write(f"Average Absolute Error: {err:.5f}")
+
